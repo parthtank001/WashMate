@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "625638819057",
+    "project_id": "washmate-691bd",
+    "storage_bucket": "washmate-691bd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:625638819057:android:c0f555adf2d9e848ab5550",
+        "android_client_info": {
+          "package_name": "com.example.washmate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOLueR_bR7Qz90q8rKQy396PxUIqPp-m8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
