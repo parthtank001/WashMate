@@ -6,6 +6,7 @@ import '../viewmodels/cart_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../services/data_service.dart';
 import '../viewmodels/home_viewmodel.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -18,7 +19,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _addressController = TextEditingController();
   final _instructionsController = TextEditingController();
   int _selectedDeliveryDays = 2; // Default to 2 days
+  String _selectedPaymentMethod = 'cod'; // Default payment
   bool _isSubmitting = false;
+  late Razorpay _razorpay;
 
   @override
   void initState() {
@@ -27,13 +30,40 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (user?.address != null) {
       _addressController.text = user!.address!;
     }
+    
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
   @override
   void dispose() {
     _addressController.dispose();
     _instructionsController.dispose();
+    _razorpay.clear(); // Removes all listeners
     super.dispose();
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Payment Successful! ID: ${response.paymentId}')));
+    }
+    _processOrder('razorpay', 'paid');
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Payment Failed: ${response.message}')));
+      setState(() => _isSubmitting = false);
+    }
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('External Wallet Selected: ${response.walletName}')));
+      setState(() => _isSubmitting = false);
+    }
   }
 
   Future<void> _submitOrder() async {
@@ -52,12 +82,55 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     setState(() => _isSubmitting = true);
 
+    if (_selectedPaymentMethod == 'online') {
+      _initRazorpayPayment(cartState.totalAmount, user.phone, user.email);
+    } else {
+      _processOrder('cod', 'pending');
+    }
+  }
+
+  void _initRazorpayPayment(double amount, String? phone, String? email) {
+    var options = {
+      'key': 'rzp_test_SffH866nWGXetV', // Test key
+      'amount': (amount * 100).toInt(), // amount in paise
+      'name': 'WashMate Laundry',
+      'description': 'Laundry Service Order',
+      'prefill': {
+        'contact': phone ?? '',
+        'email': email ?? '',
+      }
+    };
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      debugPrint('Error launching Razorpay: $e');
+      setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _processOrder(String paymentMethod, String paymentStatus) async {
+    final cartState = context.read<CartViewModel>();
+    final authState = context.read<AuthViewModel>();
+    final user = authState.currentUser;
+
+    if (user == null || cartState.items.isEmpty) return;
+
+    if (_addressController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please provide a pickup/delivery address.')),
+      );
+      return;
+    }
+
     final dataService = DataService();
     final result = await dataService.createOrder(
-      user.id,
+      user!.id,
       cartState.getOrderItemsForApi(),
       _instructionsController.text.trim(),
       _selectedDeliveryDays,
+      paymentMethod: paymentMethod,
+      paymentStatus: paymentStatus,
     );
 
     setState(() => _isSubmitting = false);
@@ -188,6 +261,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   prefixIcon: Icon(Icons.location_on_outlined),
                 ),
               ),
+              const SizedBox(height: 24),
+
+              // Payment Selection
+              Text('Payment Method', style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'cod', label: Text('Cash on Delivery'), icon: Icon(Icons.money)),
+                    ButtonSegment(value: 'online', label: Text('Pay Online Now'), icon: Icon(Icons.credit_card)),
+                  ],
+                  selected: {_selectedPaymentMethod},
+                  onSelectionChanged: (Set<String> newSelection) {
+                    setState(() {
+                      _selectedPaymentMethod = newSelection.first;
+                    });
+                  },
+                ),
+              ),
               const SizedBox(height: 20),
               
               // Special Instructions
@@ -220,7 +313,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text('Confirm Order (Cash on Delivery)'),
+                      : Text(_selectedPaymentMethod == 'cod' ? 'Confirm Order (COD)' : 'Proceed to Payment'),
                 ),
               ),
             ],

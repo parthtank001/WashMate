@@ -109,6 +109,20 @@ $statusColors = [
                                 <br><span class="text-blue-600 font-medium"><i class="fas fa-clock mr-1"></i> Requested Return: In <?= htmlspecialchars($order['delivery_days']) ?> Days</span>
                                 <?php endif; ?>
                             </div>
+
+                            <!-- Payment Status Badge -->
+                            <div class="mt-2 mb-4">
+                                <span class="text-xs font-semibold text-gray-500 uppercase">Payment:</span>
+                                <?php if($order['payment_status'] == 'paid'): ?>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2 shadow-sm border border-green-200">
+                                        <i class="fas fa-check-circle mr-1"></i> Paid (<?= strtoupper($order['payment_method']) ?>)
+                                    </span>
+                                <?php else: ?>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2 shadow-sm border border-red-200">
+                                        <i class="fas fa-times-circle mr-1"></i> Unpaid (<?= strtoupper($order['payment_method']) ?>)
+                                    </span>
+                                <?php endif; ?>
+                            </div>
                             
                             <!-- Customer Details Grid -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-4 p-4 bg-gray-50 rounded-lg">

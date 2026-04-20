@@ -47,7 +47,7 @@ class DataService {
   }
 
   // Create Order
-  Future<Map<String, dynamic>> createOrder(int userId, List<OrderItem> items, String? instructions, int deliveryDays) async {
+  Future<Map<String, dynamic>> createOrder(int userId, List<OrderItem> items, String? instructions, int deliveryDays, {String paymentMethod = 'cod', String paymentStatus = 'pending'}) async {
     try {
       // Basic validation
       if (items.isEmpty) {
@@ -62,6 +62,8 @@ class DataService {
           'items': items.map((e) => e.toJson()).toList(),
           'special_instructions': instructions,
           'delivery_days': deliveryDays,
+          'payment_method': paymentMethod,
+          'payment_status': paymentStatus,
         }),
       );
 

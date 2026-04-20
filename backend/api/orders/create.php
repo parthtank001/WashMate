@@ -31,11 +31,13 @@ if (!empty($data->user_id) && !empty($data->items) && is_array($data->items)) {
 
     try {
         $delivery_days = isset($data->delivery_days) ? (int)$data->delivery_days : null;
+        $payment_method = isset($data->payment_method) ? $data->payment_method : 'cod';
+        $payment_status = isset($data->payment_status) ? $data->payment_status : 'pending';
         
         // 1. Insert into orders table
-        $sqlOrder = "INSERT INTO orders (user_id, status, total_amount, special_instructions, delivery_days) VALUES (?, 'pending', ?, ?, ?)";
+        $sqlOrder = "INSERT INTO orders (user_id, status, total_amount, special_instructions, delivery_days, payment_method, payment_status) VALUES (?, 'pending', ?, ?, ?, ?, ?)";
         $stmtOrder = $conn->prepare($sqlOrder);
-        $stmtOrder->bind_param("idsi", $user_id, $total_amount, $special_instructions, $delivery_days);
+        $stmtOrder->bind_param("idsiss", $user_id, $total_amount, $special_instructions, $delivery_days, $payment_method, $payment_status);
         $stmtOrder->execute();
         $order_id = $stmtOrder->insert_id;
         $stmtOrder->close();
